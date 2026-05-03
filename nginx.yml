@@ -1,0 +1,71 @@
+# -----------------------------
+# Headless Service (Required for StatefulSet)
+# -----------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-stateful-service
+  labels:
+    app: nginx
+spec:
+  clusterIP: None                  # Headless service (important)
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# -----------------------------
+# StatefulSet
+# -----------------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx-statefulset
+  labels:
+    app: nginx
+spec:
+  serviceName: nginx-stateful-service   # Must match service name
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: APP_NAME
+              value: "nginx-app"
+            - name: ENV
+              value: "production"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
